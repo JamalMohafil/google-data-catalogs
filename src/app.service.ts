@@ -313,37 +313,36 @@ export class AppService {
 
   async searchInCatalog(searchDto: SearchCatalogDto = {}): Promise<any> {
     try {
-      const { query = '', limit = 100, pageToken } = searchDto;
+    const { query = '', limit = 100, pageToken } = searchDto;
 
-      if (limit < 1 || limit > 1000) {
-        throw new BadRequestException('Limit must be between 1 and 1000');
-      }
+    if (limit < 1 || limit > 1000) {
+      throw new BadRequestException('Limit must be between 1 and 1000');
+    }
 
-      const response = await this.dataCatalog.searchCatalog(
-        {
-          scope: {
-            includeProjectIds: [this.PROJECT_ID],
-            includePublicTagTemplates: false,
-          },
-          query,
-          pageSize: limit,
-          pageToken,
-          orderBy: 'RELEVANCE',
+    const response = await this.dataCatalog.searchCatalog(
+      {
+        scope: {
+          includeProjectIds: [this.PROJECT_ID],
+          includePublicTagTemplates: false,
         },
-        {
-          autoPaginate: false,
-        },
-      );
-
-      return {
-        results: response[0] || [],
-        nextPageToken: response[1]?.pageToken,
-        totalCount: response[0]?.length || 0,
-        hasMore: !!response[1]?.pageToken,
         query,
-      };
+        pageSize: limit,
+        pageToken,
+      },
+      {
+        autoPaginate: false,
+      },
+    );
+    console.log(response);
+    return {
+      results: response[0] || [],
+      nextPageToken: response[1]?.pageToken,
+      totalCount: response[0]?.length || 0,
+      hasMore: !!response[1]?.pageToken,
+      query,
+    };
     } catch (error) {
-      this.handleDataCatalogError(error, 'search catalog');
+    this.handleDataCatalogError(error, 'search catalog');
     }
   }
 

@@ -309,7 +309,7 @@ export class AppController {
     return await this.dataCatalogService.deleteEntry(catalogId, entryId);
   }
 
-  @Get('get/search')
+  @Get('legacy/search-in-catalogs')
   @ApiOperation({ summary: 'Search in catalog' })
   @ApiQuery({
     name: 'query',
@@ -460,6 +460,7 @@ export class AppController {
         displayName = 'My Product Catalog',
         description = 'Catalog for my products',
       } = body;
+      console.log(body)
 
       const createCatalogDto: CreateCatalogDto = {
         catalogId,

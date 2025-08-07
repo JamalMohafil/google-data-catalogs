@@ -309,7 +309,7 @@ export class AppController {
     return await this.dataCatalogService.deleteEntry(catalogId, entryId);
   }
 
-  @Get('search')
+  @Get('get/search')
   @ApiOperation({ summary: 'Search in catalog' })
   @ApiQuery({
     name: 'query',
@@ -343,7 +343,6 @@ export class AppController {
     return await this.dataCatalogService.searchInCatalog(searchDto);
   }
 
-  // Legacy endpoints for backward compatibility
   @Get('legacy/products')
   @ApiOperation({ summary: 'Legacy: Get catalog products' })
   @ApiQuery({

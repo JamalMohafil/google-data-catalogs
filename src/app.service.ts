@@ -9,8 +9,11 @@ import { DataCatalogClient } from '@google-cloud/datacatalog';
 import { GoogleAuth } from 'google-auth-library';
 import { CreateCatalogDto } from './dtos/create-catalog.dto';
 import { CreateEntryDto } from './dtos/create-entry.dto';
-import { PaginationDto, SearchCatalogDto } from './dtos/pagination-and-search.dto';
- 
+import {
+  PaginationDto,
+  SearchCatalogDto,
+} from './dtos/pagination-and-search.dto';
+
 @Injectable()
 export class AppService {
   private readonly logger = new Logger(AppService.name);
@@ -45,7 +48,6 @@ export class AppService {
     }
   }
 
- 
   private async checkCatalogExists(catalogId: string): Promise<boolean> {
     try {
       await this.dataCatalog.getEntryGroup({
@@ -62,7 +64,7 @@ export class AppService {
       );
     }
   }
- 
+
   private async checkEntryExists(
     catalogId: string,
     entryId: string,
@@ -82,7 +84,7 @@ export class AppService {
       );
     }
   }
- 
+
   private validateCatalogId(catalogId: string): void {
     if (!catalogId || catalogId.length < 1 || catalogId.length > 64) {
       throw new BadRequestException(
@@ -97,7 +99,6 @@ export class AppService {
     }
   }
 
- 
   private validateEntryId(entryId: string): void {
     if (!entryId || entryId.length > 64) {
       throw new BadRequestException(
@@ -112,7 +113,6 @@ export class AppService {
     }
   }
 
- 
   async createCatalog(createCatalogDto: CreateCatalogDto): Promise<any> {
     try {
       const { catalogId, displayName, description } = createCatalogDto;
@@ -150,7 +150,6 @@ export class AppService {
     }
   }
 
-  
   async getCatalog(catalogId: string): Promise<any> {
     try {
       if (!catalogId) {
@@ -186,7 +185,6 @@ export class AppService {
     }
   }
 
- 
   async createEntry(createEntryDto: CreateEntryDto): Promise<any> {
     try {
       const { catalogId, entryId, entry } = createEntryDto;
@@ -200,19 +198,19 @@ export class AppService {
 
       this.validateEntryId(entryId);
 
-       const catalogExists = await this.checkCatalogExists(catalogId);
+      const catalogExists = await this.checkCatalogExists(catalogId);
       if (!catalogExists) {
         throw new NotFoundException(`Catalog '${catalogId}' does not exist`);
       }
 
-       const entryExists = await this.checkEntryExists(catalogId, entryId);
+      const entryExists = await this.checkEntryExists(catalogId, entryId);
       if (entryExists) {
         throw new BadRequestException(
           `Entry '${entryId}' already exists in catalog '${catalogId}'`,
         );
       }
 
-       if (!entry.schema?.columns || entry.schema.columns.length === 0) {
+      if (!entry.schema?.columns || entry.schema.columns.length === 0) {
         throw new BadRequestException(
           'Schema with at least one column is required',
         );
@@ -268,7 +266,6 @@ export class AppService {
     }
   }
 
- 
   async getEntriesFromCatalog(
     catalogId: string,
     paginationDto: PaginationDto = {},
@@ -313,7 +310,7 @@ export class AppService {
       this.handleDataCatalogError(error, 'get entries from catalog');
     }
   }
- 
+
   async searchInCatalog(searchDto: SearchCatalogDto = {}): Promise<any> {
     try {
       const { query = '', limit = 100, pageToken } = searchDto;
@@ -322,16 +319,21 @@ export class AppService {
         throw new BadRequestException('Limit must be between 1 and 1000');
       }
 
-      const response = await this.dataCatalog.searchCatalog({
-        scope: {
-          includeProjectIds: [this.PROJECT_ID],
-          includePublicTagTemplates: false,
+      const response = await this.dataCatalog.searchCatalog(
+        {
+          scope: {
+            includeProjectIds: [this.PROJECT_ID],
+            includePublicTagTemplates: false,
+          },
+          query,
+          pageSize: limit,
+          pageToken,
+          orderBy: 'RELEVANCE',
         },
-        query,
-        pageSize: limit,
-        pageToken,
-        orderBy: 'RELEVANCE',
-      });
+        {
+          autoPaginate: false,
+        },
+      );
 
       return {
         results: response[0] || [],
@@ -345,7 +347,6 @@ export class AppService {
     }
   }
 
- 
   async deleteEntry(catalogId: string, entryId: string): Promise<any> {
     try {
       if (!catalogId || !entryId) {
@@ -387,7 +388,7 @@ export class AppService {
       this.handleDataCatalogError(error, 'delete entry');
     }
   }
- 
+
   async getCatalogStats(catalogId: string): Promise<any> {
     try {
       if (!catalogId) {
@@ -425,7 +426,7 @@ export class AppService {
       );
     }
   }
- 
+
   async listCatalogs(paginationDto: PaginationDto = {}): Promise<any> {
     try {
       const { limit = 100, pageToken } = paginationDto;
@@ -433,12 +434,18 @@ export class AppService {
       if (limit < 1 || limit > 1000) {
         throw new BadRequestException('Limit must be between 1 and 1000');
       }
+      console.log('Requested pageSize:', limit); // Debug log
 
-      const response = await this.dataCatalog.listEntryGroups({
-        parent: `projects/${this.PROJECT_ID}/locations/${this.LOCATION}`,
-        pageSize: limit,
-        pageToken,
-      });
+      const response = await this.dataCatalog.listEntryGroups(
+        {
+          parent: `projects/${this.PROJECT_ID}/locations/${this.LOCATION}`,
+          pageSize: limit,
+          pageToken,
+        },
+        {
+          autoPaginate: false,
+        },
+      );
 
       return {
         catalogs: response[0] || [],
@@ -451,22 +458,21 @@ export class AppService {
     }
   }
 
-  
   private handleDataCatalogError(error: any, operation: string): never {
     this.logger.error(`Error during ${operation}:`, error);
 
     switch (error.code) {
-      case 6:  
+      case 6:
         throw new BadRequestException('Resource already exists');
-      case 7:  
+      case 7:
         throw new BadRequestException(
           'Permission denied. Check your Google Cloud permissions',
         );
-      case 8:  
+      case 8:
         throw new BadRequestException('Quota exceeded. Resource limit reached');
-      case 3:  
+      case 3:
         throw new BadRequestException(`Invalid request data: ${error.message}`);
-      case 5:  
+      case 5:
         throw new NotFoundException('Resource not found');
       default:
         throw new InternalServerErrorException(
